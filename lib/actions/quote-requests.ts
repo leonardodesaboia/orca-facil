@@ -27,7 +27,40 @@ function appUrl(path: string) {
   return `${baseUrl.replace(/\/$/, "")}${path}`;
 }
 
-export type QuoteRequestFormState = { error: string } | undefined;
+export type QuoteRequestField =
+  | "customerName"
+  | "customerEmail"
+  | "customerPhone"
+  | "serviceId"
+  | "desiredDate"
+  | "desiredTime"
+  | "location"
+  | "description";
+
+export type QuoteRequestFormState =
+  | {
+      error?: string;
+      fieldErrors?: Partial<Record<QuoteRequestField, string>>;
+    }
+  | undefined;
+
+// Erros de schema por campo, para exibição inline no formulário. Regras de
+// negócio condicionais (data no passado, agendamento incompleto) seguem pelo
+// `error` de banner — abrangem mais de um campo ou dependem do item escolhido.
+function toQuoteFieldErrors(
+  error: import("zod").ZodError
+): Partial<Record<QuoteRequestField, string>> {
+  const flattened = error.flatten().fieldErrors as Record<
+    string,
+    string[] | undefined
+  >;
+  const result: Partial<Record<QuoteRequestField, string>> = {};
+  for (const [field, messages] of Object.entries(flattened)) {
+    const first = messages?.[0];
+    if (first) result[field as QuoteRequestField] = first;
+  }
+  return result;
+}
 
 export async function createQuoteRequest(
   slug: string,
@@ -46,11 +79,7 @@ export async function createQuoteRequest(
   });
 
   if (!parsed.success) {
-    return {
-      error:
-        parsed.error.issues[0]?.message ??
-        "Preencha todos os campos obrigatórios corretamente."
-    };
+    return { fieldErrors: toQuoteFieldErrors(parsed.error) };
   }
 
   const profile = await prisma.providerProfile.findUnique({

@@ -8,9 +8,19 @@ type DateInputProps = {
   defaultValue?: string | null;
   className?: string;
   required?: boolean;
+  "aria-invalid"?: boolean;
+  "aria-describedby"?: string;
 };
 
-export function DateInput({ name, id, defaultValue, className, required }: DateInputProps) {
+export function DateInput({
+  name,
+  id,
+  defaultValue,
+  className,
+  required,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedby
+}: DateInputProps) {
   const { inputProps, submitValue } = useDateInput(defaultValue ?? "");
 
   return (
@@ -22,6 +32,8 @@ export function DateInput({ name, id, defaultValue, className, required }: DateI
         id={id}
         required={required}
         type="text"
+        aria-invalid={ariaInvalid}
+        aria-describedby={ariaDescribedby}
       />
     </>
   );

@@ -31,6 +31,15 @@ const inputClass =
 
 const labelClass = "text-xs font-semibold uppercase tracking-widest text-ink-muted";
 
+function FieldError({ id, message }: { id: string; message?: string }) {
+  if (!message) return null;
+  return (
+    <p id={id} role="alert" className="text-xs font-medium text-red-600">
+      {message}
+    </p>
+  );
+}
+
 export function QuoteRequestForm({
   slug,
   services,
@@ -60,6 +69,8 @@ export function QuoteRequestForm({
   // agendamento e local de atendimento.
   const isProduct = activeService?.itemType === "PRODUCT";
 
+  const fieldErrors = state?.fieldErrors;
+
   return (
     <form action={formAction} className="mt-8 grid gap-5">
       {state?.error ? (
@@ -87,7 +98,12 @@ export function QuoteRequestForm({
           placeholder="Seu nome completo"
           required
           type="text"
+          aria-invalid={fieldErrors?.customerName ? true : undefined}
+          aria-describedby={
+            fieldErrors?.customerName ? "customerName-error" : undefined
+          }
         />
+        <FieldError id="customerName-error" message={fieldErrors?.customerName} />
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
@@ -102,6 +118,14 @@ export function QuoteRequestForm({
             name="customerEmail"
             placeholder="seu@email.com"
             type="email"
+            aria-invalid={fieldErrors?.customerEmail ? true : undefined}
+            aria-describedby={
+              fieldErrors?.customerEmail ? "customerEmail-error" : undefined
+            }
+          />
+          <FieldError
+            id="customerEmail-error"
+            message={fieldErrors?.customerEmail}
           />
         </div>
 
@@ -114,6 +138,14 @@ export function QuoteRequestForm({
             id="customerPhone"
             name="customerPhone"
             required
+            aria-invalid={fieldErrors?.customerPhone ? true : undefined}
+            aria-describedby={
+              fieldErrors?.customerPhone ? "customerPhone-error" : undefined
+            }
+          />
+          <FieldError
+            id="customerPhone-error"
+            message={fieldErrors?.customerPhone}
           />
         </div>
       </div>
@@ -130,6 +162,10 @@ export function QuoteRequestForm({
             name="serviceId"
             onChange={(e) => setCurrentServiceId(e.target.value)}
             required
+            aria-invalid={fieldErrors?.serviceId ? true : undefined}
+            aria-describedby={
+              fieldErrors?.serviceId ? "serviceId-error" : undefined
+            }
           >
             <option disabled value="">
               Selecione um item
@@ -140,6 +176,7 @@ export function QuoteRequestForm({
               </option>
             ))}
           </select>
+          <FieldError id="serviceId-error" message={fieldErrors?.serviceId} />
         </div>
       ) : null}
 
@@ -154,7 +191,12 @@ export function QuoteRequestForm({
               id="desiredDate"
               name="desiredDate"
               required
+              aria-invalid={fieldErrors?.desiredDate ? true : undefined}
+              aria-describedby={
+                fieldErrors?.desiredDate ? "desiredDate-error" : undefined
+              }
             />
+            <FieldError id="desiredDate-error" message={fieldErrors?.desiredDate} />
           </div>
 
           <div className="grid gap-2">
@@ -171,7 +213,12 @@ export function QuoteRequestForm({
               required
               type="text"
               maxLength={100}
+              aria-invalid={fieldErrors?.desiredTime ? true : undefined}
+              aria-describedby={
+                fieldErrors?.desiredTime ? "desiredTime-error" : undefined
+              }
             />
+            <FieldError id="desiredTime-error" message={fieldErrors?.desiredTime} />
           </div>
         </div>
       ) : null}
@@ -193,7 +240,12 @@ export function QuoteRequestForm({
             required
             type="text"
             maxLength={200}
+            aria-invalid={fieldErrors?.location ? true : undefined}
+            aria-describedby={
+              fieldErrors?.location ? "location-error" : undefined
+            }
           />
+          <FieldError id="location-error" message={fieldErrors?.location} />
         </div>
       ) : null}
 
@@ -207,7 +259,12 @@ export function QuoteRequestForm({
           maxLength={1200}
           name="description"
           placeholder="Alguma observação sobre o pedido, prazo ou preferências? (opcional)"
+          aria-invalid={fieldErrors?.description ? true : undefined}
+          aria-describedby={
+            fieldErrors?.description ? "description-error" : undefined
+          }
         />
+        <FieldError id="description-error" message={fieldErrors?.description} />
       </div>
 
       <button

@@ -58,7 +58,31 @@ describe("createQuoteRequest", () => {
     );
 
     expect(result).toEqual({
-      error: "Informe seu telefone."
+      fieldErrors: { customerPhone: "Informe seu telefone." }
+    });
+    expect(db.quoteRequest.create).not.toHaveBeenCalled();
+  });
+
+  it("retorna erros por campo quando vários campos são inválidos", async () => {
+    const { createQuoteRequest } = await import("@/lib/actions/quote-requests");
+    const result = await createQuoteRequest(
+      "vitriny",
+      undefined,
+      makeFormData({
+        customerName: "M",
+        customerEmail: "não-é-email",
+        customerPhone: "",
+        serviceId,
+        description: ""
+      })
+    );
+
+    expect(result).toEqual({
+      fieldErrors: {
+        customerName: "Informe seu nome.",
+        customerEmail: "Informe um e-mail válido.",
+        customerPhone: "Informe seu telefone."
+      }
     });
     expect(db.quoteRequest.create).not.toHaveBeenCalled();
   });

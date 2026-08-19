@@ -4,6 +4,13 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { createService, updateService } from "@/lib/actions/services";
+import {
+  ALLOWED_IMAGE_LABEL,
+  IMAGE_ACCEPT_ATTR,
+  isAllowedImageType,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_IMAGE_SIZE_LABEL
+} from "@/lib/image-mime";
 import { CurrencyInput } from "@/components/ui/CurrencyInput";
 import { CharCountTextarea } from "@/components/ui/CharCountTextarea";
 import {
@@ -114,7 +121,10 @@ export function ServiceForm({
           if (isEditing) {
             if (data?.imageUrl) setImageUrl(data.imageUrl);
             if (data?.error) {
-              setImageMessage({ type: "error", text: "Item salvo, mas a imagem falhou. Tente reenviar." });
+              setImageMessage({
+                type: "error",
+                text: `Item salvo, mas a imagem não foi enviada: ${data.error}`
+              });
             } else {
               setImageMessage(null);
               setSavedSuccess(true);
@@ -156,9 +166,38 @@ export function ServiceForm({
     }
   }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  function clearSelectedImage() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] ?? null;
     if (!file) return;
+
+    // Aviso imediato nos dois erros mais comuns e recuperáveis, antes de gastar
+    // o round-trip: arquivo grande demais ou fora dos formatos aceitos. O
+    // content-type do browser pode faltar — nesse caso não bloqueia aqui e
+    // deixa a checagem por assinatura no servidor decidir.
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      clearSelectedImage();
+      setImageMessage({
+        type: "error",
+        text: `Imagem muito grande. Limite de ${MAX_IMAGE_SIZE_LABEL}.`
+      });
+      return;
+    }
+    if (file.type && !isAllowedImageType(file.type)) {
+      clearSelectedImage();
+      setImageMessage({
+        type: "error",
+        text: `Formato não suportado. Envie uma imagem ${ALLOWED_IMAGE_LABEL}.`
+      });
+      return;
+    }
+
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(URL.createObjectURL(file));
     setSelectedFile(file);
@@ -461,14 +500,14 @@ export function ServiceForm({
             )}
             <div className="grid gap-1 overflow-hidden">
               <input
-                accept="image/jpeg,image/png,image/webp"
+                accept={IMAGE_ACCEPT_ATTR}
                 className="w-full min-w-0 max-w-full text-sm text-ink file:mr-3 file:rounded-lg file:border-0 file:bg-paper file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink hover:file:bg-paper-soft"
                 id="image-new"
                 onChange={handleFileChange}
                 ref={fileInputRef}
                 type="file"
               />
-              <p className="text-xs text-ink-muted">JPEG, PNG ou WebP · máx. 2 MB · enviada ao salvar</p>
+              <p className="text-xs text-ink-muted">{`${ALLOWED_IMAGE_LABEL} · máx. ${MAX_IMAGE_SIZE_LABEL} · enviada ao salvar`}</p>
             </div>
           </div>
         ) : (
@@ -490,7 +529,7 @@ export function ServiceForm({
             )}
             <div className="grid gap-1 overflow-hidden">
               <input
-                accept="image/jpeg,image/png,image/webp"
+                accept={IMAGE_ACCEPT_ATTR}
                 className="w-full min-w-0 max-w-full text-sm text-ink file:mr-3 file:rounded-lg file:border-0 file:bg-paper file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-ink hover:file:bg-paper-soft"
                 disabled={imageBusy}
                 id={`image-${service.id}`}
@@ -498,7 +537,7 @@ export function ServiceForm({
                 ref={fileInputRef}
                 type="file"
               />
-              <p className="text-xs text-ink-muted">JPEG, PNG ou WebP · máx. 2 MB · enviada ao salvar</p>
+              <p className="text-xs text-ink-muted">{`${ALLOWED_IMAGE_LABEL} · máx. ${MAX_IMAGE_SIZE_LABEL} · enviada ao salvar`}</p>
             </div>
             {imageUrl && !previewUrl ? (
               <button

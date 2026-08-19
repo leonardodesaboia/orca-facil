@@ -3,25 +3,17 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { auth } from "@/auth";
 import { canUseServiceImages } from "@/lib/plan-limits";
+import {
+  ALLOWED_IMAGE_LABEL,
+  detectImageMimeType,
+  imageExtensionFor,
+  MAX_IMAGE_SIZE_BYTES,
+  MAX_IMAGE_SIZE_LABEL
+} from "@/lib/image-mime";
 import { prisma } from "@/lib/prisma";
 import { uploadToStorage, deleteFromStorage } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
-
-const MAX_SIZE_BYTES = 2 * 1024 * 1024;
-
-function detectImageMimeType(buf: Buffer): string | null {
-  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "image/jpeg";
-  if (
-    buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47 &&
-    buf[4] === 0x0d && buf[5] === 0x0a && buf[6] === 0x1a && buf[7] === 0x0a
-  ) return "image/png";
-  if (
-    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
-    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
-  ) return "image/webp";
-  return null;
-}
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -57,7 +49,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
   if (!canUseServiceImages(profile.plan)) {
     return NextResponse.json(
-      { error: "Recurso disponível apenas no plano PRO." },
+      { error: "Imagens não estão disponíveis para esta conta." },
       { status: 403 }
     );
   }
@@ -78,9 +70,9 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Nenhuma imagem enviada." }, { status: 400 });
   }
 
-  if (file.size > MAX_SIZE_BYTES) {
+  if (file.size > MAX_IMAGE_SIZE_BYTES) {
     return NextResponse.json(
-      { error: "Imagem muito grande. Limite de 2 MB." },
+      { error: `Imagem muito grande. Limite de ${MAX_IMAGE_SIZE_LABEL}.` },
       { status: 400 }
     );
   }
@@ -90,12 +82,12 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
   if (!detectedMime) {
     return NextResponse.json(
-      { error: "Arquivo inválido. Envie uma imagem JPEG, PNG ou WebP real." },
+      { error: `Arquivo inválido. Envie uma imagem ${ALLOWED_IMAGE_LABEL} real.` },
       { status: 400 }
     );
   }
 
-  const ext = detectedMime === "image/jpeg" ? "jpg" : detectedMime === "image/png" ? "png" : "webp";
+  const ext = imageExtensionFor(detectedMime);
   const storageKey = `services/${serviceId}/${randomUUID()}.${ext}`;
 
   // Sobe a nova imagem antes de apagar a antiga: se o upload falhar,
@@ -151,7 +143,7 @@ export async function DELETE(_req: NextRequest, { params }: RouteContext) {
 
   if (!canUseServiceImages(profile.plan)) {
     return NextResponse.json(
-      { error: "Recurso disponível apenas no plano PRO." },
+      { error: "Imagens não estão disponíveis para esta conta." },
       { status: 403 }
     );
   }
